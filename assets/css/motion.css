@@ -1,0 +1,478 @@
+/* ==========================================================================
+   ZB Legal Solutions — Motion System
+   --------------------------------------------------------------------------
+   Timings, easing curves and intensity tiers translated from the
+   ui-ux-pro-max-skill motion rules (nextlevelbuilder/ui-ux-pro-max-skill,
+   src/ui-ux-pro-max/data/motion.csv) into dependency-free CSS + JS.
+
+   Rules applied, by row:
+     1  Hover subtle      — <2px displacement, 150-200ms, power1.out
+     2  Hover standard    — y:-4 scale:1.02, 200-300ms, power2.out
+     3  Hover complex     — magnetic, pull clamped *0.3, max 2 per screen
+     4  Scroll reveal     — y:12 fade, 300-400ms, power1.out, start top 90%
+     5  Scroll standard   — y:24 stagger 0.08, 400-600ms, power2.out, max 8
+     6  Scrub             — scroll-linked, max 1-2 pinned sections per page
+     7  Stagger subtle    — y:8 stagger 0.03, 250-350ms
+     8  Stagger standard  — scale .92 stagger 0.06, back.out(1.4), grid wave
+     9  Split text        — chars, stagger 0.015, expo.out, headlines only
+    10  Page transition   — 200-300ms fade, exit faster than entrance
+    11  Overlay wipe      — 400-600ms, power2.inOut, transform only
+    13  Parallax subtle   — yPercent 5-15, decorative layers only, never text
+    14  Parallax layered  — vary speed per layer, clip the wrapper
+    15  Shimmer           — 1200-1600ms loop, sine.inOut, gradient sweep
+
+   Every rule's "Don't" column is honoured; see motion.js for the runtime.
+   All motion is transform/opacity only, so it stays on the compositor thread.
+   ========================================================================== */
+
+:root {
+  /* --- Easing: GSAP curves as cubic-beziers --- */
+  --e-power1-out:   cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --e-power2-out:   cubic-bezier(0.22, 0.61, 0.36, 1);
+  --e-power3-out:   cubic-bezier(0.165, 0.84, 0.44, 1);
+  --e-expo-out:     cubic-bezier(0.16, 1, 0.30, 1);
+  --e-back-out:     cubic-bezier(0.34, 1.56, 0.64, 1);   /* back.out(1.4) */
+  --e-power1-inout: cubic-bezier(0.45, 0, 0.55, 1);
+  --e-power2-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --e-expo-inout:   cubic-bezier(0.87, 0, 0.13, 1);
+  --e-sine-inout:   cubic-bezier(0.37, 0, 0.63, 1);
+
+  /* --- Duration tiers --- */
+  --d-hover-subtle:   170ms;
+  --d-hover-standard: 250ms;
+  --d-magnetic:       400ms;
+  --d-reveal-subtle:  350ms;
+  --d-reveal:         520ms;
+  --d-stagger-grid:   420ms;
+  --d-split:          620ms;
+  --d-exit:           220ms;   /* exit always faster than entrance (row 10) */
+  --d-enter:          380ms;
+  --d-wipe:           440ms;
+}
+
+/* ==========================================================================
+   1. Scroll reveal — rows 4 & 5
+   Elements start hidden ONLY once JS has confirmed it can reveal them.
+   Without JS the .motion-ready class never lands and everything stays visible.
+   ========================================================================== */
+.motion-ready [data-reveal] {
+  opacity: 0;
+  will-change: transform, opacity;
+}
+/* Row 4 subtle: y offset 8-16px so it reads as a fade, not a slide */
+.motion-ready [data-reveal="fade"]  { transform: translate3d(0, 12px, 0); }
+/* Row 5 standard */
+.motion-ready [data-reveal="up"]    { transform: translate3d(0, 24px, 0); }
+.motion-ready [data-reveal="left"]  { transform: translate3d(-28px, 0, 0); }
+.motion-ready [data-reveal="right"] { transform: translate3d(28px, 0, 0); }
+/* Row 8 standard grid: scale .92 + y:16, back.out overshoot */
+.motion-ready [data-reveal="pop"]   { transform: translate3d(0, 16px, 0) scale(0.92); }
+
+.motion-ready [data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--d-reveal) var(--e-power2-out),
+    transform var(--d-reveal) var(--e-power2-out);
+}
+.motion-ready [data-reveal="fade"].is-in {
+  transition-duration: var(--d-reveal-subtle);
+  transition-timing-function: var(--e-power1-out);
+}
+.motion-ready [data-reveal="pop"].is-in {
+  transition-duration: var(--d-stagger-grid);
+  transition-timing-function: var(--e-back-out);
+}
+/* Free the compositor layer once the tween has settled (row 13 perf note) */
+.motion-ready [data-reveal].is-settled { will-change: auto; }
+
+/* ==========================================================================
+   2. Split-text headline reveal — row 9
+   Chars only, expo.out, 0.015s stagger, headlines under ~8 words.
+   The source text is preserved on the parent as aria-label and the split
+   spans are aria-hidden, so screen readers read the original string.
+   ========================================================================== */
+.split { display: inline-block; }
+.split__word {
+  display: inline-block;
+  white-space: nowrap;      /* never break a word mid-reveal */
+  overflow: hidden;         /* mask for the char rise */
+  padding-bottom: 0.12em;   /* room for descenders inside the mask */
+  margin-bottom: -0.12em;
+  vertical-align: top;
+}
+.split__char {
+  display: inline-block;
+  transform: translate3d(0, 105%, 0) rotateX(-40deg);
+  opacity: 0;
+  transform-origin: 50% 100%;
+  will-change: transform, opacity;
+}
+.split.is-in .split__char {
+  transform: none;
+  opacity: 1;
+  transition:
+    transform var(--d-split) var(--e-expo-out),
+    opacity calc(var(--d-split) * 0.6) var(--e-power1-out);
+  transition-delay: var(--char-delay, 0ms);
+}
+.split.is-settled .split__char { will-change: auto; }
+
+/* ==========================================================================
+   3. Hover micro-interactions — rows 1 & 2
+   Transform/opacity only. Never width/height/margin (row 1 "Don't").
+   ========================================================================== */
+@media (hover: hover) and (pointer: fine) {
+  /* Row 1 subtle: displacement under 2px so it reads as feedback */
+  .btn { transition:
+      background var(--d-hover-subtle) var(--e-power1-out),
+      color var(--d-hover-subtle) var(--e-power1-out),
+      border-color var(--d-hover-subtle) var(--e-power1-out),
+      transform var(--d-hover-subtle) var(--e-power1-out),
+      box-shadow var(--d-hover-standard) var(--e-power2-out); }
+  .btn:hover { transform: translate3d(0, -1.5px, 0); }
+
+  /* Row 2 standard: y:-4, scale 1.02, matching reverse tween on leave */
+  .card, .post, .review, .fee-card {
+    transition:
+      transform var(--d-hover-standard) var(--e-power2-out),
+      box-shadow var(--d-hover-standard) var(--e-power2-out),
+      border-color var(--d-hover-standard) var(--e-power2-out);
+  }
+  .card:hover, .post:hover, .review:hover, .fee-card:hover {
+    transform: translate3d(0, -4px, 0) scale(1.015);
+  }
+
+  /* Gold hairline that draws in under a hovered card */
+  .card, .post, .fee-card { position: relative; }
+  .card::after, .post::after, .fee-card::after {
+    content: "";
+    position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    transform: scaleX(0); transform-origin: left;
+    transition: transform var(--d-hover-standard) var(--e-power2-out);
+    pointer-events: none;
+  }
+  .card:hover::after, .post:hover::after, .fee-card:hover::after { transform: scaleX(1); }
+
+  /* Practice-area icon lifts and warms with its card */
+  .card__icon {
+    transition:
+      transform var(--d-hover-standard) var(--e-back-out),
+      background var(--d-hover-standard) var(--e-power1-out),
+      color var(--d-hover-standard) var(--e-power1-out);
+  }
+  .card:hover .card__icon {
+    transform: translate3d(0, -2px, 0) scale(1.06) rotate(-3deg);
+    background: var(--gold); color: #fff;
+  }
+
+  /* Nav underline already exists in styles.css — retime it to the system */
+  .nav__links a::after { transition: transform var(--d-hover-standard) var(--e-power2-out); }
+}
+
+/* ==========================================================================
+   4. Magnetic buttons — row 3
+   Pull clamped to *0.3 so the element never leaves its hit box.
+   motion.js applies this to at most 2 focal elements per screen.
+   ========================================================================== */
+.magnetic { position: relative; will-change: transform; }
+.magnetic__inner { display: inline-flex; will-change: transform; }
+.magnetic.is-resting,
+.magnetic.is-resting .magnetic__inner {
+  transition: transform var(--d-magnetic) var(--e-back-out);
+}
+
+/* ==========================================================================
+   5. Parallax — rows 13 & 14
+   Decorative layers only. Wrapper clips. Never applied to text or controls.
+   ========================================================================== */
+.parallax-wrap { position: relative; overflow: hidden; }
+.parallax-layer { will-change: transform; pointer-events: none; }
+.parallax-layer.is-settled { will-change: auto; }
+
+/* ==========================================================================
+   6. Scroll progress rail
+   ========================================================================== */
+.scroll-rail {
+  position: fixed; top: 0; left: 0; right: 0; height: 2px;
+  z-index: 130; pointer-events: none; background: transparent;
+}
+.scroll-rail__fill {
+  height: 100%; width: 100%; transform: scaleX(0); transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold), var(--gold-light));
+}
+
+/* ==========================================================================
+   7. Page transitions — rows 10 & 11
+   Overlay wipe on transform only (row 11 perf note). Exit 220ms, entrance
+   380ms — asymmetric so back/forward feels snappy (row 10 perf note).
+   ========================================================================== */
+.page-wipe {
+  position: fixed; inset: 0; z-index: 200; pointer-events: none;
+  background: var(--ink);
+  transform: translate3d(0, 100%, 0);
+  display: grid; place-items: center;
+}
+.page-wipe__mark { width: 54px; color: var(--gold); opacity: 0; }
+.page-wipe.is-covering {
+  transform: translate3d(0, 0, 0);
+  transition: transform var(--d-wipe) var(--e-power2-inout);
+}
+.page-wipe.is-covering .page-wipe__mark {
+  opacity: 1;
+  transition: opacity 200ms var(--e-power1-out) 120ms;
+}
+.page-wipe.is-clearing {
+  transform: translate3d(0, -100%, 0);
+  transition: transform var(--d-wipe) var(--e-power2-inout);
+}
+
+/* Entrance: the page itself rises in on load */
+.motion-ready .page-enter {
+  animation: page-enter var(--d-enter) var(--e-power2-out) both;
+}
+@keyframes page-enter {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ==========================================================================
+   8. Counters — value locks in with a subtle scale settle
+   ========================================================================== */
+.stat__value { display: inline-block; will-change: transform; }
+.stat__value.is-counting { transform: scale(1.04); }
+.stat__value.is-done {
+  transform: none;
+  transition: transform 420ms var(--e-back-out);
+  will-change: auto;
+}
+
+/* ==========================================================================
+   9. Quote gallery — scroll-scrubbed, one pinned section per page (row 6)
+   ========================================================================== */
+.quotes {
+  position: relative;
+  background: var(--ink);
+  color: var(--sand-300);
+  /* No overflow:hidden here — it would create a scroll container and break
+     position:sticky on .quotes__sticky. The ::before glow is inset:0 anyway. */
+}
+.quotes::before {
+  content: "";
+  position: absolute; inset: 0;
+  clip-path: inset(0);
+  background:
+    radial-gradient(60% 80% at 20% 20%, rgba(176,138,51,.22), transparent 60%),
+    radial-gradient(50% 70% at 85% 80%, rgba(214,188,124,.14), transparent 60%);
+  pointer-events: none;
+}
+/* Native pin: a tall scroll track with a sticky stage inside it.
+   No JS pinning, no layout thrash — the browser does the work (row 6). */
+.quotes__scroll { position: relative; }
+.quotes__sticky {
+  position: sticky; top: 0;
+  min-height: 100svh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  /* Extra top padding offsets the sticky header so the quote reads as
+     optically centred in the space the visitor can actually see. */
+  padding-block: calc(var(--header-h) + 46px) var(--s-8);
+}
+.quotes__stage {
+  position: relative; z-index: 1;
+  width: 100%;
+  min-height: clamp(300px, 40vh, 400px);
+  display: grid;
+}
+.quotes__item {
+  grid-area: 1 / 1;
+  display: flex; flex-direction: column; justify-content: center;
+  text-align: center;
+  opacity: 0;
+  transform: translate3d(0, 26px, 0);
+  pointer-events: none;
+  transition:
+    opacity 520ms var(--e-power2-out),
+    transform 520ms var(--e-power2-out);
+}
+.quotes__item.is-active {
+  opacity: 1; transform: none; pointer-events: auto;
+}
+.quotes__item.is-leaving {
+  opacity: 0; transform: translate3d(0, -22px, 0);
+  transition-duration: 320ms;
+}
+.quotes blockquote {
+  margin: 0 auto var(--s-6);
+  max-width: 22ch;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3.4vw, 2.5rem);
+  line-height: 1.28;
+  font-style: italic;
+  color: var(--ivory-50);
+  text-wrap: balance;
+}
+.quotes blockquote em { font-style: normal; color: var(--gold-light); }
+.quotes__lang {
+  display: block; font-family: var(--font-display); font-style: normal;
+  font-size: clamp(.95rem, 1.6vw, 1.15rem); color: var(--gold-light);
+  opacity: .82; margin-top: var(--s-3); letter-spacing: .01em;
+}
+.quotes__by { font-size: var(--fs-sm); letter-spacing: .04em; }
+.quotes__by strong {
+  display: block; color: var(--gold-light);
+  font-size: var(--fs-md); letter-spacing: .12em; text-transform: uppercase;
+  font-weight: 600; margin-bottom: var(--s-2);
+}
+.quotes__by span { color: var(--muted-lt); font-size: var(--fs-xs); }
+
+/* Progress dots double as manual controls */
+.quotes__dots {
+  position: relative; z-index: 1;
+  display: flex; flex-wrap: wrap; gap: var(--s-2);
+  justify-content: center; margin-top: var(--s-7);
+}
+.quotes__dot {
+  width: 30px; height: 3px; padding: 0; border: 0; cursor: pointer;
+  background: rgba(214,188,124,.24); border-radius: var(--r-pill);
+  position: relative; overflow: hidden;
+  transition: background 240ms var(--e-power1-out);
+}
+.quotes__dot::after {
+  content: ""; position: absolute; inset: 0;
+  background: var(--gold-light);
+  transform: scaleX(0); transform-origin: left;
+}
+.quotes__dot[aria-selected="true"]::after {
+  transform: scaleX(1);
+  transition: transform 420ms var(--e-power2-out);
+}
+.quotes__dot:hover { background: rgba(214,188,124,.42); }
+
+/* ==========================================================================
+   10. Marquee — the firm's areas of practice, continuous
+   Paused on hover/focus and offscreen by motion.js (row 17 discipline).
+   ========================================================================== */
+.marquee {
+  overflow: hidden; position: relative;
+  border-block: 1px solid var(--line-soft);
+  padding-block: var(--s-5);
+  background: var(--ivory-100);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.marquee__track {
+  display: flex; width: max-content; gap: var(--s-7);
+  animation: marquee 46s linear infinite;
+  will-change: transform;
+}
+.marquee.is-paused .marquee__track { animation-play-state: paused; }
+.marquee__item {
+  display: inline-flex; align-items: center; gap: var(--s-4);
+  font-family: var(--font-display); font-size: var(--fs-lg);
+  color: var(--muted); white-space: nowrap;
+}
+.marquee__item::after {
+  content: "\2726"; color: var(--gold); font-size: .7em;
+}
+@keyframes marquee { to { transform: translate3d(-50%, 0, 0); } }
+
+/* ==========================================================================
+   11. Gold rule that draws itself in on reveal
+   ========================================================================== */
+.motion-ready .rule::before,
+.motion-ready .rule::after { transform: scaleX(0); transform-origin: center; }
+.motion-ready .rule.is-in::before,
+.motion-ready .rule.is-in::after {
+  transform: scaleX(1);
+  transition: transform 620ms var(--e-power3-out);
+}
+
+/* ==========================================================================
+   12. Reduced motion — row 9 of ux-guidelines, and every motion.csv row.
+   Kill all non-essential motion and render the FINAL state immediately.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .motion-ready [data-reveal],
+  .motion-ready [data-reveal].is-in {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    will-change: auto !important;
+  }
+  .split__char {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .motion-ready .page-enter { animation: none !important; }
+  .motion-ready .rule::before,
+  .motion-ready .rule::after { transform: scaleX(1) !important; transition: none !important; }
+  .page-wipe { display: none !important; }
+  .marquee__track { animation: none !important; transform: none !important; }
+  .marquee {
+    overflow-x: auto;
+    -webkit-mask-image: none; mask-image: none;
+  }
+  .quotes__item {
+    transition: none !important;
+    transform: none !important;
+  }
+  .btn:hover, .card:hover, .post:hover, .review:hover, .fee-card:hover {
+    transform: none !important;
+  }
+  .card:hover .card__icon { transform: none !important; }
+  .magnetic, .magnetic__inner { transform: none !important; }
+  .parallax-layer { transform: none !important; }
+  .stat__value.is-counting, .stat__value.is-done { transform: none !important; }
+  .scroll-rail { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Quote gallery scroll track
+   Height = one viewport of pin + one step per quote. `--steps` is set inline
+   from the markup so the track always matches the number of quotes.
+   -------------------------------------------------------------------------- */
+.quotes__scroll { height: calc(100svh + (var(--steps, 5) * 46svh)); }
+@media (max-width: 700px) {
+  .quotes__scroll { height: calc(100svh + (var(--steps, 5) * 38svh)); }
+}
+
+/* Reduced motion / no-JS: unpin, stack every quote, drop the dots. */
+.quotes__scroll.is-static { height: auto; }
+.quotes__scroll.is-static .quotes__sticky { position: static; min-height: 0; }
+.quotes__scroll.is-static .quotes__stage { display: block; min-height: 0; }
+.quotes__scroll.is-static .quotes__item {
+  opacity: 1; transform: none; pointer-events: auto;
+  padding-block: var(--s-7);
+  border-bottom: 1px solid rgba(214,188,124,.16);
+}
+.quotes__scroll.is-static .quotes__item:last-child { border-bottom: 0; }
+.quotes__scroll.is-static .quotes__dots { display: none; }
+
+/* Hint that the section scrubs, fading out once the visitor starts */
+.quotes__hint {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: var(--s-3);
+  margin-top: var(--s-6);
+  font-size: var(--fs-xs); letter-spacing: .16em; text-transform: uppercase;
+  color: var(--muted-lt);
+}
+.quotes__hint svg { width: 14px; height: 14px; animation: nudge 2.4s var(--e-sine-inout) infinite; }
+@keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .quotes__hint { display: none; }
+}
+
+/* Oversized scales watermark drifting behind the hero (decorative, row 13) */
+.hero__watermark {
+  position: absolute;
+  right: -6%; top: 50%;
+  width: min(560px, 52vw);
+  transform: translateY(-50%);
+  color: var(--gold);
+  opacity: .06;
+  z-index: 0;
+}
+@media (max-width: 980px) { .hero__watermark { right: -22%; opacity: .05; } }

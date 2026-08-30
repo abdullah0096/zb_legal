@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Replace zblegalsolutions.in with the real domain once it is registered. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://zblegalsolutions.in/</loc><priority>1.0</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://zblegalsolutions.in/about.html</loc><priority>0.8</priority><changefreq>yearly</changefreq></url>
+  <url><loc>https://zblegalsolutions.in/services.html</loc><priority>0.9</priority><changefreq>yearly</changefreq></url>
+  <url><loc>https://zblegalsolutions.in/fees.html</loc><priority>0.8</priority><changefreq>yearly</changefreq></url>
+  <url><loc>https://zblegalsolutions.in/blog.html</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://zblegalsolutions.in/contact.html</loc><priority>0.9</priority><changefreq>yearly</changefreq></url>
+</urlset>

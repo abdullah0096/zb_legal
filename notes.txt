@@ -1,0 +1,60 @@
+Similar web-sites
+ - https://www.rosenblatt.law/
+ - https://www.transferofequitysolicitor.co.uk/
+ - https://trencheslaw.co.uk/
+ - http://www.lsasolicitors.co.uk/
+ - https://legalsolutions.thomsonreuters.co.uk/en.html
+ - https://legalsolutionslawfirm.ca/ <<<<<< this is good 
+ - https://www.omegalaw.com/ <<<<<<<<<<<<<< this is good 
+ - https://www.dosajfirm.com/
+ - https://www.kirtanepandit.com/
+ - https://trilegal.com/
+ - https://www.jsalaw.com/
+
+
+Prompts
+ - Analyze this design system JSON for spacing, border-radius, typography sizing, and strict color tokens. Implement a landing page using these exact variables. Do not deviate from this visual hierarchy.
+
+
+Resources
+ - https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
+ - https://21st.dev/
+
+
+Non Functional 
+ - Premium font
+ - Desktop and mobile friendly
+
+
+Features
+ - Services | Practice Area
+    - Statistics : Family Cases resolved | Criminal Cases Resolved | Traffic Cases Resolved | 
+ - About page
+    - Geo-location of services provided
+- Calculator : https://legalsolutionslawfirm.ca/child-support-calculator    
+ - Contact page
+ - CTA for get quote
+ - Phone number
+ - Thank you page
+ - Blog
+ - Speak with us (Book an appointment)
+ - Logos/names of socities / councils etc that you are a part of
+ - Fees / Pricing
+    - https://davidwyld.co.uk/home-layouts/fees/
+    - https://www.transferofequitysolicitor.co.uk/gifting-property
+ - Famous quotes by prominent lawyers/jurists etc. 
+ - Brochure (5-8 pages) (https://davidwyld.co.uk/wp-content/uploads/2018/06/David-Wyld-Co-Online-Brochure-1.pdf)
+ - Join Us (https://davidwyld.co.uk/home-layouts/)
+ - Why clients choose us
+    - Free 15 minutes consultation
+    - More here https://legalsolutionslawfirm.ca/
+ - Team photo
+ - Google rating
+ - Gallery (Events organised/attended/office etc.)
+ - Unique page titles
+ - Cookie consent
+ - Reviews
+ - favicon
+ - FAQ
+ - Custom 404
+ - 
